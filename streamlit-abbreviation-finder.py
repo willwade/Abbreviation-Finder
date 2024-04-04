@@ -7,6 +7,7 @@ from nltk.tokenize import word_tokenize
 import chardet
 import io
 from collections import Counter
+import textract
 
 # Ensure necessary NLTK resources are downloaded
 nltk.download('punkt')
@@ -16,14 +17,37 @@ nltk.download('words')  # This ensures the 'words' corpus is available
 english_words = set(words.words())  # This should now work without errors
 english_stopwords = set(stopwords.words('english'))
 
-def read_text(file):
-    """
-    Read a text file and return its contents as a string.
-    """
-    raw_data = file.read()
-    encoding = chardet.detect(raw_data)['encoding']
-    text = raw_data.decode(encoding, errors='ignore')
-    return text
+# Modified read_text function using textract
+def read_text(uploaded_file):
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.' + uploaded_file.name.split('.')[-1]) as tmp_file:
+        tmp_file.write(uploaded_file.getvalue())
+        tmp_file_path = tmp_file.name
+    text = textract.process(tmp_file_path, encoding='utf-8')
+    return text.decode('utf-8')
+
+# Streamlit UI code for uploading files and displaying results
+st.title('Abbreviation Suggestion Tool')
+
+uploaded_file = st.file_uploader("Choose a text file", type=['txt', 'docx', 'rtf', 'pdf', 'odt', 'etc'])
+if uploaded_file is not None:
+    text = read_text(uploaded_file)
+    suggestions = process_text(text)  # Ensure process_text can handle the extracted text
+    if suggestions:
+        st.write('Suggested Abbreviations:')
+        df = pd.DataFrame(list(suggestions.items()), columns=['Original', 'Abbreviation'])
+        df = df.sort_values(by='Abbreviation', ascending=False)
+        st.table(df)
+        
+        # CSV Download
+        csv = convert_to_csv(suggestions)
+        st.download_button(
+            label="Download abbreviations as CSV",
+            data=csv,
+            file_name='abbreviations.csv',
+            mime='text/csv',
+        )
+    else:
+        st.write("No suggestions could be generated.")
 
 def normalize_and_count(words):
     """
