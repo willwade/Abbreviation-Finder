@@ -34,6 +34,55 @@ lots of ways to do this. but one way is to use pandoc
 pandoc input.docx -t plain -o output.txt
 ```
 
+On Linux/MacOS install pandoc](https://github.com/jgm/pandoc/releases) then use a script like `convert_documents.sh` with `chmod u+x convert_documents.sh` like so
+
+```bash
+#!/bin/bash
+
+# Directory containing your documents
+DOC_DIR="/path/to/your/documents"
+
+# Output file
+OUTPUT_FILE="combined_text.txt"
+
+# Empty or create the output file
+> "$OUTPUT_FILE"
+
+# Loop through all supported document files in the directory
+for file in "$DOC_DIR"/*; do
+    echo "Processing $file..."
+    # Use Pandoc to convert to plain text and append to the output file
+    pandoc "$file" -t plain >> "$OUTPUT_FILE"
+done
+
+echo "All documents have been combined into $OUTPUT_FILE."
+```
+
+or windows `convert_documents.bat`
+
+```bat
+@echo off
+setlocal enabledelayedexpansion
+
+REM Directory containing your documents
+set "DOC_DIR=path\to\your\documents"
+
+REM Output file
+set "OUTPUT_FILE=combined_text.txt"
+
+REM Empty or create the output file
+type nul > "%OUTPUT_FILE%"
+
+REM Loop through all supported document files in the directory
+for %%F in ("%DOC_DIR%\*") do (
+    echo Processing %%F...
+    REM Use Pandoc to convert to plain text and append to the output file
+    pandoc "%%F" -t plain >> "%OUTPUT_FILE%"
+)
+
+echo All documents have been combined into %OUTPUT_FILE%.
+```
+
 Put all your docs to review in a target folder e.g ``txts``
 
 
