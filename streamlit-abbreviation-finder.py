@@ -1,19 +1,16 @@
 import streamlit as st
 import pandas as pd
 import nltk
-nltk.download('words')
-from nltk import word_tokenize
-from nltk.corpus import stopwords
-from collections import Counter, defaultdict
+from nltk.corpus import stopwords, words  # Corrected import here
 import chardet
-import tempfile
 import io
 
 # Ensure necessary NLTK resources are downloaded
 nltk.download('punkt')
 nltk.download('stopwords')
+nltk.download('words')  # This ensures the 'words' corpus is available
 
-english_words = set(words.words())
+english_words = set(words.words())  # This should now work without errors
 english_stopwords = set(stopwords.words('english'))
 
 def read_text(file):
