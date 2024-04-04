@@ -41,7 +41,35 @@ Put all your docs to review in a target folder e.g ``txts``
 
 ```bash
 python abbreviation-finder.py path/to/txts-directory
-````
+```
+
+It then spits out some words/sentences e.g
+
+``
+speaking -> sp
+Consider -> co
+directly -> di
+preferred -> pr
+practice -> pr
+literacy -> li
+extended -> ex
+languages -> la
+confused -> co
+educational -> ed
+telephone -> te
+important -> im
+language -> la
+situation -> si
+sentences -> se
+development -> de
+conversations -> co
+activity -> ac
+alongside -> al
+more languages -> ml
+can not -> cn
+bilingual children -> bc
+use words -> uw
+``
 
 enjoy! 
 
