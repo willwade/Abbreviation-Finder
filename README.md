@@ -44,3 +44,9 @@ python abbreviation-finder.py path/to/txts-directory
 ````
 
 enjoy! 
+
+## Refs
+
+- https://news.ycombinator.com/item?id=39916366#39926892
+- https://vasilishynkarenka.com/how-to-type-3x-faster/
+- https://blog.abreevy8.io/you-dont-have-to-type-faster-to-type-faster/
