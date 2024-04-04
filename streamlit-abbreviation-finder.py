@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import nltk
 from nltk.corpus import stopwords, words  # Corrected import here
+from nltk.tokenize import word_tokenize
 import chardet
 import io
 
