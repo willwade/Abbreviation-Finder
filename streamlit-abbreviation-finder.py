@@ -12,6 +12,9 @@ import io
 nltk.download('punkt')
 nltk.download('stopwords')
 
+english_words = set(words.words())
+english_stopwords = set(stopwords.words('english'))
+
 def read_text(file):
     """
     Read a text file and return its contents as a string.
@@ -58,11 +61,58 @@ def generate_unique_abbreviations(words):
     
     return abbreviations
 
+
+def is_real_word(abbreviation):
+    return abbreviation.lower() in english_words
+
+def next_vowel(word):
+    for letter in word[1:]:
+        if letter.lower() in 'aeiou':
+            return letter
+    return ''
+
+def generate_abbreviation(word_or_phrase):
+    # Remove small words for phrases
+    words = [word for word in word_tokenize(word_or_phrase) if word.lower() not in english_stopwords and len(word) > 1]
+    if len(words) > 1:  # It's a phrase
+        abbreviation = ''.join(word[0] for word in words).lower()
+    else:  # It's a single word
+        word = words[0]
+        abbreviation = (word[0] + word[1]).lower() if len(word) > 1 else word[0].lower()
+
+    return abbreviation
+
+def unique_abbreviation(original, existing_abbreviations):
+    abbreviation = generate_abbreviation(original)
+    if abbreviation not in existing_abbreviations and not is_real_word(abbreviation):
+        return abbreviation
+
+    # Try first letter + next vowel
+    if len(original) > 2:
+        abbreviation = (original[0] + next_vowel(original)).lower()
+        if abbreviation not in existing_abbreviations and not is_real_word(abbreviation):
+            return abbreviation
+
+    # Append numbers (1-9), then double digits as last case
+    for i in range(1, 100):
+        new_abbreviation = f"{abbreviation}{i}"
+        if new_abbreviation not in existing_abbreviations:
+            return new_abbreviation
+
 def process_text(text):
-    words = word_tokenize(text)
-    # Filter out stopwords and non-alphabetic words
-    words = [word for word in words if word.isalpha() and word.lower() not in stopwords.words('english')]
-    return generate_unique_abbreviations(words)
+    words_phrases = set(word_tokenize(text))
+    existing_abbreviations = set()
+    abbreviations = {}
+    
+    for original in words_phrases:
+        if original.lower() in english_stopwords or len(original) <= 1:
+            continue
+        abbreviation = unique_abbreviation(original, existing_abbreviations)
+        existing_abbreviations.add(abbreviation)
+        abbreviations[original] = abbreviation
+    
+    return abbreviations
+
 
 def convert_to_csv(suggestions):
     """
