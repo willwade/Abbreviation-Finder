@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import nltk
+nltk.download('words')
 from nltk import word_tokenize
 from nltk.corpus import stopwords
 from collections import Counter, defaultdict
