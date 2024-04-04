@@ -1,10 +1,9 @@
 import streamlit as st
 import pandas as pd
-import os
 import nltk
-from nltk import bigrams, word_tokenize
+from nltk import word_tokenize
 from nltk.corpus import stopwords
-from collections import Counter
+from collections import Counter, defaultdict
 import chardet
 import tempfile
 import io
@@ -17,52 +16,53 @@ def read_text(file):
     """
     Read a text file and return its contents as a string.
     """
-    with open(file, 'rb') as f:
-        raw_data = f.read()
-        encoding = chardet.detect(raw_data)['encoding']
-    
-    with open(file, 'r', encoding=encoding, errors='ignore') as file:
-        text = file.read()
+    raw_data = file.read()
+    encoding = chardet.detect(raw_data)['encoding']
+    text = raw_data.decode(encoding, errors='ignore')
     return text
 
-def tokenize_text(text):
+def normalize_and_count(words):
     """
-    Tokenize the given text into words and bigrams.
+    Normalize words to lowercase for counting, but store the most common case (uppercase/lowercase) for each word.
     """
+    lowercase_counts = Counter([word.lower() for word in words])
+    case_counts = defaultdict(Counter)
+    for word in words:
+        case_counts[word.lower()][word] += 1
+    # Choose the most common case for each word
+    chosen_cases = {word: case_counts[word].most_common(1)[0][0] for word in lowercase_counts}
+    return chosen_cases, lowercase_counts
+
+def generate_unique_abbreviations(words):
+    """
+    Generate unique abbreviations for a list of words, ensuring no conflicts.
+    """
+    chosen_cases, counts = normalize_and_count(words)
+    abbreviations = {}
+    used_abbreviations = set()
+    
+    for word, _ in counts.most_common():  # Process words by frequency
+        base_word = chosen_cases[word]
+        abbreviation = base_word[:2].lower()
+        # Ensure the abbreviation is unique
+        original_abbreviation = abbreviation
+        i = 2
+        while abbreviation in used_abbreviations:
+            i += 1
+            abbreviation = (base_word[:i] + base_word[-1]).lower()[:2]  # Try a new abbreviation
+            if i > len(base_word):  # Fallback if we run out of letters
+                abbreviation = original_abbreviation + str(len(used_abbreviations))
+        
+        used_abbreviations.add(abbreviation)
+        abbreviations[base_word] = abbreviation
+    
+    return abbreviations
+
+def process_text(text):
     words = word_tokenize(text)
-    bi_grams = list(bigrams(words))
-    return words, bi_grams
-
-def suggest_abbreviations(words, bi_grams):
-    """
-    Suggest abbreviations for long words and common bigrams.
-    """
-    suggestions = {}
-    english_stopwords = stopwords.words('english')
-
-    # Filter for long and complex words
-    for word in set(words):
-        if len(word) > 7 and word.lower() not in english_stopwords and word.isalpha():
-            abbreviation = word[:2].lower()  # Use first two letters, lowercase
-            if abbreviation not in english_stopwords:
-                suggestions[word] = abbreviation
-
-    # Process for common bigrams
-    bi_gram_counts = Counter(bi_grams)
-    for (w1, w2), count in bi_gram_counts.items():
-        if count > 1 and all(word.isalpha() for word in [w1, w2]):
-            abbreviation = w1[0].lower() + w2[0].lower()
-            if abbreviation not in english_stopwords:
-                suggestions[f"{w1} {w2}"] = abbreviation
-
-    return suggestions
-
-def process_file(uploaded_file):
-    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
-        tmp_file.write(uploaded_file.getvalue())
-        text = read_text(tmp_file.name)
-    words, bi_grams = tokenize_text(text)
-    return suggest_abbreviations(words, bi_grams)
+    # Filter out stopwords and non-alphabetic words
+    words = [word for word in words if word.isalpha() and word.lower() not in stopwords.words('english')]
+    return generate_unique_abbreviations(words)
 
 def convert_to_csv(suggestions):
     """
@@ -76,14 +76,13 @@ def convert_to_csv(suggestions):
 # Streamlit UI
 st.title('Abbreviation Suggestion Tool')
 
-uploaded_file = st.file_uploader("Choose a text file", type=['txt'])
+uploaded_file = st.file_uploader("Choose a text file", type=['txt', 'docx', 'rtf'])
 if uploaded_file is not None:
-    suggestions = process_file(uploaded_file)
+    text = read_text(uploaded_file)
+    suggestions = process_text(text)
     if suggestions:
         st.write('Suggested Abbreviations:')
-        # Convert suggestions to DataFrame for nicer display
         df = pd.DataFrame(list(suggestions.items()), columns=['Original', 'Abbreviation'])
-        # Sort the DataFrame by the 'Abbreviation' column
         df = df.sort_values(by='Abbreviation', ascending=False)
         st.table(df)
         
