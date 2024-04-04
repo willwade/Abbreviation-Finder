@@ -28,7 +28,7 @@ def read_text(uploaded_file):
 # Streamlit UI code for uploading files and displaying results
 st.title('Abbreviation Suggestion Tool')
 
-uploaded_file = st.file_uploader("Choose a text file", type=['txt', 'docx', 'rtf', 'pdf', 'odt', 'etc'])
+uploaded_file = st.file_uploader("Choose a text file", type=['txt', 'docx', 'rtf', 'pdf', 'odt'])
 if uploaded_file is not None:
     text = read_text(uploaded_file)
     suggestions = process_text(text)  # Ensure process_text can handle the extracted text
