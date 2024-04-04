@@ -98,17 +98,41 @@ def unique_abbreviation(original, existing_abbreviations):
         if new_abbreviation not in existing_abbreviations:
             return new_abbreviation
 
+def find_common_phrases(text, max_length=7, min_frequency=2):
+    tokens = word_tokenize(text.lower())
+    stop_words = set(stopwords.words('english'))
+    tokens = [token for token in tokens if token.isalpha() and token not in stop_words]
+    
+    common_phrases = Counter()
+    for n in range(2, max_length + 1):
+        for n_gram in ngrams(tokens, n):
+            if all(word not in stop_words for word in n_gram):  # Ensure n-gram doesn't consist only of stopwords
+                common_phrases[n_gram] += 1
+    
+    # Filter by frequency and return phrases
+    return [' '.join(phrase) for phrase, count in common_phrases.items() if count >= min_frequency]
+
 def process_text(text):
-    words_phrases = set(word_tokenize(text))
+    # First, find common phrases in the text
+    common_phrases = find_common_phrases(text, max_length=7, min_frequency=2)
+    
+    # Generate abbreviations for common phrases
     existing_abbreviations = set()
     abbreviations = {}
-    
-    for original in words_phrases:
-        if original.lower() in english_stopwords or len(original) <= 1:
-            continue
-        abbreviation = unique_abbreviation(original, existing_abbreviations)
+    for phrase in common_phrases:
+        abbreviation = unique_abbreviation(phrase, existing_abbreviations)
         existing_abbreviations.add(abbreviation)
-        abbreviations[original] = abbreviation
+        abbreviations[phrase] = abbreviation
+    
+    # Now, process individual words that are not part of any common phrases
+    words = set(word_tokenize(text)) - set(' '.join(common_phrases).split())
+    for word in words:
+        if word.lower() in english_stopwords or len(word) <= 1:
+            continue
+        if word not in abbreviations:  # Avoid processing words that are already handled as part of phrases
+            abbreviation = unique_abbreviation(word, existing_abbreviations)
+            existing_abbreviations.add(abbreviation)
+            abbreviations[word] = abbreviation
     
     return abbreviations
 
