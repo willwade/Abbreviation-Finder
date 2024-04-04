@@ -5,6 +5,7 @@ from nltk.corpus import stopwords, words  # Corrected import here
 from nltk.tokenize import word_tokenize
 import chardet
 import io
+from collections import Counter
 
 # Ensure necessary NLTK resources are downloaded
 nltk.download('punkt')
