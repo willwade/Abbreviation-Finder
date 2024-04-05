@@ -196,7 +196,12 @@ if uploaded_file is not None:
     if suggestions:
         st.write('Suggested Abbreviations:')
         df = create_df_and_sort(suggestions)
-        st.table(df)
+        st.dataframe(
+            df,
+            hide_index=True,
+        )
+        
+        
         for top_n in [10, 50]:
             total_savings, percentage_increase = calculate_savings(df, top_n)
             st.write(f"By learning the top {top_n} abbreviations, you would save {total_savings} keystrokes, "
