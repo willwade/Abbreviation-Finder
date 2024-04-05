@@ -229,13 +229,19 @@ def generate_plist_content(df):
     
     return xml_str
 
+def generate_ahk_script(df):
+    script_lines = []
+    for _, row in df.iterrows():
+        script_line = f"::{row['Abbreviation']}::{row['Original']}"
+        script_lines.append(script_line)
+    return "\n".join(script_lines)
 
 # Streamlit UI code for uploading files and displaying results
 st.title('Abbreviation Suggestion Tool')
 st.markdown("""
     This tool helps you generate abbreviations for long words or phrases, making your typing faster and more efficient. 
     Upload your documents, and the tool will analyze the text to suggest useful abbreviations. Use the filters to include your likely abbreviations based on frequency found in your text. 
-    You can then download these abbreviations in CSV format or as a plist file for [Mac/iOS text replacements](https://support.apple.com/en-gb/guide/mac-help/mchl2a7bd795/mac).
+    You can then download these abbreviations in CSV format, a plist file for [Mac/iOS text replacements](https://support.apple.com/en-gb/guide/mac-help/mchl2a7bd795/mac) or as a [autohotkey](https://www.autohotkey.com) file.
     Want more ideas why abbreviations might be useful? Have a read of [this](https://blog.abreevy8.io/you-dont-have-to-type-faster-to-type-faster/). Bear in mind though the cognitive effort to learn these abbreviations. 
     **NB: We don't save your uploaded documents - we just parse them then display the summarised data here**
 """)
@@ -284,6 +290,13 @@ if uploaded_files:
                 data=plist_content,
                 file_name='Text Substitutions.plist',
                 mime='application/x-plist'
+            )
+            ahk_script_content = generate_ahk_script(filtered_df)
+            st.download_button(
+                label="Download as AutoHotkey Script",
+                data=ahk_script_content,
+                file_name='abbreviations.ahk',
+                mime='text/plain'
             )
 
     else:
