@@ -275,7 +275,7 @@ if uploaded_files:
         st.download_button(
             label="Download for Mac/iOS Text Replacements",
             data=plist_content,
-            file_name='text_replacements.plist',
+            file_name='Text Substitutions.plist',
             mime='application/x-plist'
         )        
     else:
