@@ -156,6 +156,8 @@ def create_df_and_sort(abbreviations):
                       columns=['Original', 'Abbreviation', 'Frequency'])
     # Sort by Frequency in descending order
     df = df.sort_values(by='Frequency', ascending=False)
+    # Reset the index without adding the old index as a column
+    df = df.reset_index(drop=True)
     return df
 
 
