@@ -198,41 +198,37 @@ def calculate_savings(df, top_n):
     return total_savings, percentage_increase
 
 
-def convert_to_csv(suggestions):
+def convert_to_csv(df):
     """
-    Convert the suggestions dictionary to a CSV string.
+    Convert the filtered DataFrame to a CSV string.
     """
-    df = pd.DataFrame(list(suggestions.items()), columns=['Original', 'Abbreviation'])
-    # Sort the DataFrame by the 'Abbreviation' column
+    # Sort the DataFrame by the 'Abbreviation' column if needed
     df = df.sort_values(by='Abbreviation', ascending=False)
     return df.to_csv(index=False).encode('utf-8')
 
 
-
-def generate_plist_content(abbreviations):
+def generate_plist_content(df):
     plist = ET.Element('plist', version="1.0")
     array = ET.SubElement(plist, 'array')
     
-    for original, (abbreviation, _) in abbreviations.items():
+    for _, row in df.iterrows():
         dict_elem = ET.SubElement(array, 'dict')
         phrase_key = ET.SubElement(dict_elem, 'key')
         phrase_key.text = 'phrase'
         phrase_value = ET.SubElement(dict_elem, 'string')
-        phrase_value.text = original
+        phrase_value.text = row['Original']
         shortcut_key = ET.SubElement(dict_elem, 'key')
         shortcut_key.text = 'shortcut'
         shortcut_value = ET.SubElement(dict_elem, 'string')
-        shortcut_value.text = abbreviation
+        shortcut_value.text = row['Abbreviation']
     
-    # Generate the XML string
     tree = ET.ElementTree(plist)
     xml_str = ET.tostring(plist, encoding='utf-8', method='xml').decode('utf-8')
-    
-    # Add XML declaration and DOCTYPE
     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' \
               '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n' + xml_str
     
     return xml_str
+
 
 # Streamlit UI code for uploading files and displaying results
 st.title('Abbreviation Suggestion Tool')
@@ -250,8 +246,12 @@ if uploaded_files:
             ('All', 'Just Phrases', 'Just Words'),
             index=0  # Default to showing 'All'
         )
+        min_frequency = st.slider("Minimum frequency", min_value=1, max_value=10, value=1)
+
         df = create_df_and_sort(suggestions)
         filtered_df = filter_df(df, filter_option)
+        # Assuming 'filtered_df' is the DataFrame after applying the first filter (phrases/words)
+        filtered_df = filtered_df[filtered_df['Frequency'] >= min_frequency]
         st.dataframe(filtered_df, hide_index=True)
 
         
@@ -260,23 +260,25 @@ if uploaded_files:
             st.write(f"By learning the top {top_n} abbreviations, you would save {total_savings} keystrokes, "
                      f"leading to an increase in WPM rate by approximately {percentage_increase:.2f}%.")
         
-        # CSV Download
-        csv = convert_to_csv(suggestions)
-        st.download_button(
-            label="Download abbreviations as CSV",
-            data=csv,
-            file_name='abbreviations.csv',
-            mime='text/csv',
-        )
-        
-        #Text replacements plist
-        plist_content = generate_plist_content(suggestions)    
-        # Offer the plist for download
-        st.download_button(
-            label="Download for Mac/iOS Text Replacements",
-            data=plist_content,
-            file_name='Text Substitutions.plist',
-            mime='application/x-plist'
-        )        
+        if filtered_df is not None and not filtered_df.empty:
+            # CSV Download
+            csv = convert_to_csv(filtered_df)
+            st.download_button(
+                label="Download abbreviations as CSV",
+                data=csv,
+                file_name='abbreviations.csv',
+                mime='text/csv',
+            )
+            
+            # Text replacements plist
+            plist_content = generate_plist_content(filtered_df)    
+            # Offer the plist for download
+            st.download_button(
+                label="Download for Mac/iOS Text Replacements",
+                data=plist_content,
+                file_name='Text Substitutions.plist',
+                mime='application/x-plist'
+            )
+
     else:
         st.write("No suggestions could be generated.")
