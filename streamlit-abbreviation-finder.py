@@ -7,6 +7,7 @@ from nltk.tokenize import word_tokenize
 import chardet
 import io
 from collections import Counter
+from collections import defaultdict
 import textract
 import tempfile
 
@@ -113,32 +114,42 @@ def find_common_phrases(text, max_length=7, min_frequency=2):
             if all(word not in stop_words for word in n_gram):  # Ensure n-gram doesn't consist only of stopwords
                 common_phrases[n_gram] += 1
     
-    # Filter by frequency and return phrases
-    return [' '.join(phrase) for phrase, count in common_phrases.items() if count >= min_frequency]
+    # Return phrases and their frequencies
+    return { ' '.join(phrase): count for phrase, count in common_phrases.items() if count >= min_frequency }
 
 def process_text(text):
-    # First, find common phrases in the text
-    common_phrases = find_common_phrases(text, max_length=7, min_frequency=2)
+    # Find common phrases and their frequencies
+    common_phrases_with_freq = find_common_phrases(text, max_length=7, min_frequency=2)
     
     # Generate abbreviations for common phrases
     existing_abbreviations = set()
     abbreviations = {}
-    for phrase in common_phrases:
+    for phrase, freq in common_phrases_with_freq.items():
         abbreviation = unique_abbreviation(phrase, existing_abbreviations)
         existing_abbreviations.add(abbreviation)
-        abbreviations[phrase] = abbreviation
+        abbreviations[phrase] = (abbreviation, freq)
     
-    # Now, process individual words that are not part of any common phrases
-    words = set(word_tokenize(text)) - set(' '.join(common_phrases).split())
+    # Process individual words not in common phrases
+    words = set(word_tokenize(text.lower())) - set(' '.join(common_phrases_with_freq.keys()).split())
     for word in words:
         if word.lower() in english_stopwords or len(word) <= 1:
             continue
-        if word not in abbreviations:  # Avoid processing words that are already handled as part of phrases
+        if word not in abbreviations:  # Avoid reprocessing
+            freq = text.lower().split().count(word)  # Simple frequency count for individual words
             abbreviation = unique_abbreviation(word, existing_abbreviations)
             existing_abbreviations.add(abbreviation)
-            abbreviations[word] = abbreviation
+            abbreviations[word] = (abbreviation, freq)
     
     return abbreviations
+
+
+def create_df_and_sort(abbreviations):
+    # Convert abbreviations and frequencies to a DataFrame
+    df = pd.DataFrame([(original, abbr[0], abbr[1]) for original, abbr in abbreviations.items()],
+                      columns=['Original', 'Abbreviation', 'Frequency'])
+    # Sort by Frequency in descending order
+    df = df.sort_values(by='Frequency', ascending=False)
+    return df
 
 
 def convert_to_csv(suggestions):
@@ -159,8 +170,7 @@ if uploaded_file is not None:
     suggestions = process_text(text)  # Ensure process_text can handle the extracted text
     if suggestions:
         st.write('Suggested Abbreviations:')
-        df = pd.DataFrame(list(suggestions.items()), columns=['Original', 'Abbreviation'])
-        df = df.sort_values(by='Abbreviation', ascending=False)
+        df = create_df_and_sort(suggestions)
         st.table(df)
         
         # CSV Download
