@@ -169,6 +169,17 @@ def create_df_and_sort(abbreviations):
     df = df.reset_index(drop=True)
     return df
 
+def filter_df(df, option):
+    if option == 'Just Phrases':
+        # Filter to show only phrases (assuming phrases contain spaces)
+        return df[df['Original'].str.contains(' ')]
+    elif option == 'Just Words':
+        # Filter to show only words (assuming words do not contain spaces)
+        return df[~df['Original'].str.contains(' ')]
+    else:
+        # 'All' option, no filtering needed
+        return df
+
 def calculate_savings(df, top_n):
     # Assume each word is 5 keystrokes on average
     avg_keystrokes_per_word = 5
@@ -199,13 +210,22 @@ def convert_to_csv(suggestions):
 st.title('Abbreviation Suggestion Tool')
 
 uploaded_files = st.file_uploader("Choose text files", accept_multiple_files=True, type=['txt', 'docx', 'pdf', 'rtf', 'odt'])
+
+
 if uploaded_files:
     combined_text = read_and_combine_texts(uploaded_files)
     suggestions = process_text(combined_text)  # Ensure process_text can handle the extracted text
     if suggestions:
         st.write('Suggested Abbreviations:')
+        filter_option = st.selectbox(
+            "Select items to display:",
+            ('All', 'Just Phrases', 'Just Words'),
+            index=0  # Default to showing 'All'
+        )
         df = create_df_and_sort(suggestions)
-        st.dataframe(df, hide_index=True)
+        filtered_df = filter_df(df, filter_option)
+        st.dataframe(filtered_df, hide_index=True)
+
         
         for top_n in [10, 50]:
             total_savings, percentage_increase = calculate_savings(df, top_n)
