@@ -78,6 +78,13 @@ def next_vowel(word):
 def generate_abbreviation(word_or_phrase):
     # Remove small words for phrases
     words = [word for word in word_tokenize(word_or_phrase) if word.lower() not in english_stopwords and len(word) > 1]
+    
+    # Check if the list is empty after filtering
+    if not words:
+        # Handle the case where no words meet the criteria
+        # For example, return a placeholder or log a message
+        return "NA"  # Placeholder abbreviation, adjust as needed
+    
     if len(words) > 1:  # It's a phrase
         abbreviation = ''.join(word[0] for word in words).lower()
     else:  # It's a single word
