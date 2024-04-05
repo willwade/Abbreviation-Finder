@@ -8,6 +8,7 @@ import chardet
 import io
 from collections import Counter
 import textract
+import tempfile
 
 # Ensure necessary NLTK resources are downloaded
 nltk.download('punkt')
