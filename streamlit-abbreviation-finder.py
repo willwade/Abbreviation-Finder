@@ -10,6 +10,7 @@ from collections import Counter
 from collections import defaultdict
 import textract
 import tempfile
+import xml.etree.ElementTree as ET
 
 # Ensure necessary NLTK resources are downloaded
 nltk.download('punkt')
@@ -206,6 +207,33 @@ def convert_to_csv(suggestions):
     df = df.sort_values(by='Abbreviation', ascending=False)
     return df.to_csv(index=False).encode('utf-8')
 
+
+
+def generate_plist_content(abbreviations):
+    plist = ET.Element('plist', version="1.0")
+    array = ET.SubElement(plist, 'array')
+    
+    for original, (abbreviation, _) in abbreviations.items():
+        dict_elem = ET.SubElement(array, 'dict')
+        phrase_key = ET.SubElement(dict_elem, 'key')
+        phrase_key.text = 'phrase'
+        phrase_value = ET.SubElement(dict_elem, 'string')
+        phrase_value.text = original
+        shortcut_key = ET.SubElement(dict_elem, 'key')
+        shortcut_key.text = 'shortcut'
+        shortcut_value = ET.SubElement(dict_elem, 'string')
+        shortcut_value.text = abbreviation
+    
+    # Generate the XML string
+    tree = ET.ElementTree(plist)
+    xml_str = ET.tostring(plist, encoding='utf-8', method='xml').decode('utf-8')
+    
+    # Add XML declaration and DOCTYPE
+    xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' \
+              '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n' + xml_str
+    
+    return xml_str
+
 # Streamlit UI code for uploading files and displaying results
 st.title('Abbreviation Suggestion Tool')
 
@@ -240,5 +268,15 @@ if uploaded_files:
             file_name='abbreviations.csv',
             mime='text/csv',
         )
+        
+        #Text replacements plist
+        plist_content = generate_plist_content(suggestions)    
+        # Offer the plist for download
+        st.download_button(
+            label="Download for Mac/iOS Text Replacements",
+            data=plist_content,
+            file_name='text_replacements.plist',
+            mime='application/x-plist'
+        )        
     else:
         st.write("No suggestions could be generated.")
