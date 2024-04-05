@@ -228,7 +228,7 @@ if uploaded_files:
 
         
         for top_n in [10, 50]:
-            total_savings, percentage_increase = calculate_savings(df, top_n)
+            total_savings, percentage_increase = calculate_savings(filtered_df, top_n)
             st.write(f"By learning the top {top_n} abbreviations, you would save {total_savings} keystrokes, "
                      f"leading to an increase in WPM rate by approximately {percentage_increase:.2f}%.")
         
