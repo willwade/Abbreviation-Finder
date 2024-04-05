@@ -20,6 +20,15 @@ english_words = set(words.words())  # This should now work without errors
 english_stopwords = set(stopwords.words('english'))
 
 # Modified read_text function using textract
+def read_and_combine_texts(uploaded_files):
+    combined_text = ""
+    for uploaded_file in uploaded_files:
+        # Process each file individually
+        text = read_text(uploaded_file)
+        combined_text += text + " "  # Add a space between texts from different files
+    return combined_text
+
+
 def read_text(uploaded_file):
     with tempfile.NamedTemporaryFile(delete=False, suffix='.' + uploaded_file.name.split('.')[-1]) as tmp_file:
         tmp_file.write(uploaded_file.getvalue())
@@ -189,24 +198,19 @@ def convert_to_csv(suggestions):
 # Streamlit UI code for uploading files and displaying results
 st.title('Abbreviation Suggestion Tool')
 
-uploaded_file = st.file_uploader("Choose a text file", type=['txt', 'docx', 'rtf', 'pdf', 'odt'])
-if uploaded_file is not None:
-    text = read_text(uploaded_file)
-    suggestions = process_text(text)  # Ensure process_text can handle the extracted text
+uploaded_files = st.file_uploader("Choose text files", accept_multiple_files=True, type=['txt', 'docx', 'pdf', 'rtf', 'odt'])
+if uploaded_files:
+    combined_text = read_and_combine_texts(uploaded_files)
+    suggestions = process_text(combined_text)  # Ensure process_text can handle the extracted text
     if suggestions:
         st.write('Suggested Abbreviations:')
         df = create_df_and_sort(suggestions)
-        st.dataframe(
-            df,
-            hide_index=True,
-        )
-        
+        st.dataframe(df, hide_index=True)
         
         for top_n in [10, 50]:
             total_savings, percentage_increase = calculate_savings(df, top_n)
             st.write(f"By learning the top {top_n} abbreviations, you would save {total_savings} keystrokes, "
                      f"leading to an increase in WPM rate by approximately {percentage_increase:.2f}%.")
-
         
         # CSV Download
         csv = convert_to_csv(suggestions)
