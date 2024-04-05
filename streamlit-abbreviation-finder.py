@@ -236,7 +236,8 @@ st.markdown("""
     This tool helps you generate abbreviations for long words or phrases, making your typing faster and more efficient. 
     Upload your documents, and the tool will analyze the text to suggest useful abbreviations. Use the filters to include your likely abbreviations based on frequency found in your text. 
     You can then download these abbreviations in CSV format or as a plist file for [Mac/iOS text replacements](https://support.apple.com/en-gb/guide/mac-help/mchl2a7bd795/mac).
-    Want more ideas why abbreviations might be useful? Have a read of [this](https://blog.abreevy8.io/you-dont-have-to-type-faster-to-type-faster/). Bear in mind though the cognitive effort to learn these abbreviations.  
+    Want more ideas why abbreviations might be useful? Have a read of [this](https://blog.abreevy8.io/you-dont-have-to-type-faster-to-type-faster/). Bear in mind though the cognitive effort to learn these abbreviations. 
+    **NB: We don't save your uploaded documents - we just parse them then display the summarised data here**
 """)
 uploaded_files = st.file_uploader("Choose text files", accept_multiple_files=True, type=['txt', 'docx', 'pdf', 'rtf', 'odt'])
 
