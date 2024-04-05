@@ -25,29 +25,6 @@ def read_text(uploaded_file):
     text = textract.process(tmp_file_path, encoding='utf-8')
     return text.decode('utf-8')
 
-# Streamlit UI code for uploading files and displaying results
-st.title('Abbreviation Suggestion Tool')
-
-uploaded_file = st.file_uploader("Choose a text file", type=['txt', 'docx', 'rtf', 'pdf', 'odt'])
-if uploaded_file is not None:
-    text = read_text(uploaded_file)
-    suggestions = process_text(text)  # Ensure process_text can handle the extracted text
-    if suggestions:
-        st.write('Suggested Abbreviations:')
-        df = pd.DataFrame(list(suggestions.items()), columns=['Original', 'Abbreviation'])
-        df = df.sort_values(by='Abbreviation', ascending=False)
-        st.table(df)
-        
-        # CSV Download
-        csv = convert_to_csv(suggestions)
-        st.download_button(
-            label="Download abbreviations as CSV",
-            data=csv,
-            file_name='abbreviations.csv',
-            mime='text/csv',
-        )
-    else:
-        st.write("No suggestions could be generated.")
 
 def normalize_and_count(words):
     """
@@ -172,13 +149,13 @@ def convert_to_csv(suggestions):
     df = df.sort_values(by='Abbreviation', ascending=False)
     return df.to_csv(index=False).encode('utf-8')
 
-# Streamlit UI
+# Streamlit UI code for uploading files and displaying results
 st.title('Abbreviation Suggestion Tool')
 
-uploaded_file = st.file_uploader("Choose a text file", type=['txt', 'docx', 'rtf'])
+uploaded_file = st.file_uploader("Choose a text file", type=['txt', 'docx', 'rtf', 'pdf', 'odt'])
 if uploaded_file is not None:
     text = read_text(uploaded_file)
-    suggestions = process_text(text)
+    suggestions = process_text(text)  # Ensure process_text can handle the extracted text
     if suggestions:
         st.write('Suggested Abbreviations:')
         df = pd.DataFrame(list(suggestions.items()), columns=['Original', 'Abbreviation'])
