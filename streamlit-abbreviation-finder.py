@@ -160,6 +160,22 @@ def create_df_and_sort(abbreviations):
     df = df.reset_index(drop=True)
     return df
 
+def calculate_savings(df, top_n):
+    # Assume each word is 5 keystrokes on average
+    avg_keystrokes_per_word = 5
+    # Calculate keystroke savings for the top N abbreviations
+    df['Keystroke Savings'] = df['Original'].apply(len) - df['Abbreviation'].apply(len)
+    total_savings = df.head(top_n)['Keystroke Savings'].sum()
+    # Calculate the average savings per word
+    avg_savings_per_word = total_savings / top_n
+    # Estimate the increase in "words" that could be typed per minute
+    additional_words_per_minute = avg_savings_per_word / avg_keystrokes_per_word
+    # Assuming an average typing speed of 40 WPM
+    avg_typing_speed = 40
+    # Calculate the percentage increase in WPM
+    percentage_increase = (additional_words_per_minute / avg_typing_speed) * 100
+    return total_savings, percentage_increase
+
 
 def convert_to_csv(suggestions):
     """
@@ -181,6 +197,11 @@ if uploaded_file is not None:
         st.write('Suggested Abbreviations:')
         df = create_df_and_sort(suggestions)
         st.table(df)
+        for top_n in [10, 50]:
+            total_savings, percentage_increase = calculate_savings(df, top_n)
+            st.write(f"By learning the top {top_n} abbreviations, you would save {total_savings} keystrokes, "
+                     f"leading to an increase in WPM rate by approximately {percentage_increase:.2f}%.")
+
         
         # CSV Download
         csv = convert_to_csv(suggestions)
