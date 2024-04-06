@@ -276,7 +276,7 @@ if uploaded_files:
             # CSV Download
             csv = convert_to_csv(filtered_df)
             st.download_button(
-                label="Download abbreviations as CSV",
+                label="⊞  Download abbreviations as CSV",
                 data=csv,
                 file_name='abbreviations.csv',
                 mime='text/csv',
@@ -286,14 +286,14 @@ if uploaded_files:
             plist_content = generate_plist_content(filtered_df)    
             # Offer the plist for download
             st.download_button(
-                label="Download for Mac/iOS Text Replacements",
+                label=" Download for Mac/iOS Text Replacements",
                 data=plist_content,
                 file_name='Text Substitutions.plist',
                 mime='application/x-plist'
             )
             ahk_script_content = generate_ahk_script(filtered_df)
             st.download_button(
-                label="Download as AutoHotkey Script",
+                label="⊞ Download as AutoHotkey Script",
                 data=ahk_script_content,
                 file_name='abbreviations.ahk',
                 mime='text/plain'
