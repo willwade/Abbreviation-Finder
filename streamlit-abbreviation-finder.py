@@ -160,7 +160,7 @@ def process_text(text):
     existing_abbreviations = set()
     abbreviations = {}
     for phrase, freq in common_phrases_with_freq.items():
-        abbreviation = unique_abbreviation(word, existing_abbreviations, english_words, avoid_numbers)
+        abbreviation = unique_abbreviation(phrase, existing_abbreviations, english_words, avoid_numbers)
         existing_abbreviations.add(abbreviation)
         abbreviations[phrase] = (abbreviation, freq)
     
