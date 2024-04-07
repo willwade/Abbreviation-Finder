@@ -171,7 +171,7 @@ def process_text(text,avoid_numbers=False):
             continue
         if word not in abbreviations:  # Avoid reprocessing
             freq = text.lower().split().count(word)  # Simple frequency count for individual words
-            abbreviation = unique_abbreviation(word, existing_abbreviations, english_words)
+            abbreviation = unique_abbreviation(word, existing_abbreviations, english_words,avoid_numbers)
             existing_abbreviations.add(abbreviation)
             abbreviations[word] = (abbreviation, freq)
     
@@ -265,13 +265,14 @@ st.markdown("""
     Upload your documents, and the tool will analyze the text to suggest useful abbreviations. Use the filters to include your likely abbreviations based on frequency found in your text. 
     You can then download these abbreviations in CSV format, a plist file for [Mac/iOS text replacements](https://support.apple.com/en-gb/guide/mac-help/mchl2a7bd795/mac) or as a [autohotkey](https://www.autohotkey.com) file.
     Want more ideas why abbreviations might be useful? Have a read of [this](https://blog.abreevy8.io/you-dont-have-to-type-faster-to-type-faster/). Bear in mind though the cognitive effort to learn these abbreviations. 
-    **NB: We don't save your uploaded documents - we just parse them then display the summarised data here**
+    Use avoid numbers if you don't want numbers in your abbreviations. Often useful for AAC devices. 
+    **NB: We don't save your uploaded documents - we just parse them then display the summarised data here.**
 """)
 uploaded_files = st.file_uploader("Choose text files", accept_multiple_files=True, type=['txt', 'docx', 'pdf', 'rtf', 'odt'])
 
 if uploaded_files:
     combined_text = read_and_combine_texts(uploaded_files)
-    avoid_numbers_option = st.checkbox("No numbers in abbreviations", value=False)
+    avoid_numbers_option = st.checkbox("Remove numbers in abbreviations", value=False)
     if avoid_numbers_option:
         suggestions = process_text(combined_text, avoid_numbers=True)
     else:
