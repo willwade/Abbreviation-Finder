@@ -118,23 +118,27 @@ def unique_abbreviation(original, existing_abbreviations, english_words, avoid_n
     abbreviation = generate_abbreviation(original)
     base_abbreviation = abbreviation
     counter = 1
-    
+
     while abbreviation in existing_abbreviations or abbreviation in english_words:
         if avoid_numbers:
-            # Attempt to modify the abbreviation without using numbers
-            if len(base_abbreviation) >= counter:
-                # Add an additional letter from the original word or repeat the last letter
-                next_letter = base_abbreviation[counter % len(base_abbreviation)]
-                abbreviation += next_letter
+            # Generate a new abbreviation variant by appending a new letter or duplicating the last one
+            # This checks if we've tried less than the length of the original word to find a unique letter
+            if counter <= len(original):
+                next_index = counter % len(original)  # Use modulo to cycle through the original word's letters
+                next_letter = original[next_index]
             else:
-                # Fallback to repeating the last letter if no more unique letters are available
-                abbreviation += base_abbreviation[-1]
+                # If all letters have been tried, start doubling the last letter of the abbreviation
+                next_letter = abbreviation[-1]
+                
+            abbreviation = base_abbreviation + next_letter
         else:
             # Use numbers to ensure uniqueness
             abbreviation = f"{base_abbreviation}{counter}"
         
         counter += 1
-    
+        if counter > 100:  # Safety check to prevent infinite loops
+            break
+
     existing_abbreviations.add(abbreviation)
     return abbreviation
 
