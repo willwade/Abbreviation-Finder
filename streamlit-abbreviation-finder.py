@@ -158,7 +158,7 @@ def process_text(text):
             continue
         if word not in abbreviations:  # Avoid reprocessing
             freq = text.lower().split().count(word)  # Simple frequency count for individual words
-            abbreviation = unique_abbreviation(word, existing_abbreviations)
+            abbreviation = unique_abbreviation(word, existing_abbreviations, english_words)
             existing_abbreviations.add(abbreviation)
             abbreviations[word] = (abbreviation, freq)
     
