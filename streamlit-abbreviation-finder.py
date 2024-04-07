@@ -11,6 +11,7 @@ from collections import defaultdict
 import textract
 import tempfile
 import xml.etree.ElementTree as ET
+import re
 
 # Ensure necessary NLTK resources are downloaded
 nltk.download('punkt')
