@@ -234,10 +234,9 @@ def generate_plist_content(df):
     
     return xml_str
 
-"""
- For this I really want to offer the option of adding to this 
- https://www.autohotkey.com/boards/viewtopic.php?f=83&t=120220&start=60#p565896
-"""
+# For this I really want to offer the option of adding to this 
+# https://www.autohotkey.com/boards/viewtopic.php?f=83&t=120220&start=60#p565896
+
 def generate_ahk_script(df):
     script_lines = []
     for _, row in df.iterrows():
