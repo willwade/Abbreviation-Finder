@@ -271,8 +271,11 @@ uploaded_files = st.file_uploader("Choose text files", accept_multiple_files=Tru
 
 if uploaded_files:
     combined_text = read_and_combine_texts(uploaded_files)
-    avoid_numbers = st.checkbox("No numbers in abbreviations", value=False)
-    suggestions = process_text(combined_text,avoid_numbers)  # Ensure process_text can handle the extracted text
+    avoid_numbers_option = st.checkbox("No numbers in abbreviations", value=False)
+    if avoid_numbers_option:
+        suggestions = process_text(combined_text, avoid_numbers=True)
+    else:
+        suggestions = process_text(combined_text, avoid_numbers=False)
     if suggestions:
         st.write('Suggested Abbreviations:')
         filter_option = st.selectbox(
