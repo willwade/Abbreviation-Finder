@@ -152,7 +152,7 @@ def find_common_phrases(text, max_length=7, min_frequency=2):
     # Return phrases and their frequencies
     return { ' '.join(phrase): count for phrase, count in common_phrases.items() if count >= min_frequency }
 
-def process_text(text):
+def process_text(text,avoid_numbers=False):
     # Find common phrases and their frequencies
     common_phrases_with_freq = find_common_phrases(text, max_length=7, min_frequency=2)
     
@@ -268,11 +268,11 @@ st.markdown("""
     **NB: We don't save your uploaded documents - we just parse them then display the summarised data here**
 """)
 uploaded_files = st.file_uploader("Choose text files", accept_multiple_files=True, type=['txt', 'docx', 'pdf', 'rtf', 'odt'])
-avoid_numbers = st.checkbox("No numbers in abbreviations", value=False)
 
 if uploaded_files:
     combined_text = read_and_combine_texts(uploaded_files)
-    suggestions = process_text(combined_text)  # Ensure process_text can handle the extracted text
+    avoid_numbers = st.checkbox("No numbers in abbreviations", value=False)
+    suggestions = process_text(combined_text,avoid_numbers)  # Ensure process_text can handle the extracted text
     if suggestions:
         st.write('Suggested Abbreviations:')
         filter_option = st.selectbox(
