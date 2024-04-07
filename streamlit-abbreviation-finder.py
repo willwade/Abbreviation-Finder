@@ -50,6 +50,22 @@ def normalize_and_count(words):
     chosen_cases = {word: case_counts[word].most_common(1)[0][0] for word in lowercase_counts}
     return chosen_cases, lowercase_counts
 
+
+def heuristic_syllables(word):
+    # This is a placeholder for your syllable detection logic
+    syllables = re.findall(r'[bcdfghjklmnpqrstvwxyz]*[aeiouy]+', word.lower())
+    return [syl[0] for syl in syllables]
+    
+def generate_syllable_abbreviation(phrase):
+    words = phrase.split()
+    abbreviation = ''
+    for word in words:
+        syllables = heuristic_syllables(word)
+        # Take the first letter of each syllable for the abbreviation
+        for syllable in syllables:
+            abbreviation += syllable[0]
+    return abbreviation
+
 def generate_unique_abbreviations(words):
     """
     Generate unique abbreviations for a list of words, ensuring no conflicts.
@@ -86,39 +102,28 @@ def next_vowel(word):
     return ''
 
 def generate_abbreviation(word_or_phrase):
-    # Remove small words for phrases
     words = [word for word in word_tokenize(word_or_phrase) if word.lower() not in english_stopwords and len(word) > 1]
     
-    # Check if the list is empty after filtering
-    if not words:
-        # Handle the case where no words meet the criteria
-        # For example, return a placeholder or log a message
-        return "NA"  # Placeholder abbreviation, adjust as needed
-    
-    if len(words) > 1:  # It's a phrase
-        abbreviation = ''.join(word[0] for word in words).lower()
-    else:  # It's a single word
+    if len(words) == 1:  # It's a single word, use syllables
         word = words[0]
-        abbreviation = (word[0] + word[1]).lower() if len(word) > 1 else word[0].lower()
-
+        syllable_initials = heuristic_syllables(word)
+        abbreviation = ''.join(syllable_initials)
+    else:  # It's a phrase, use initial letters
+        abbreviation = ''.join(word[0] for word in words).lower()
+    
     return abbreviation
 
-def unique_abbreviation(original, existing_abbreviations):
+def unique_abbreviation(original, existing_abbreviations, english_words):
     abbreviation = generate_abbreviation(original)
-    if abbreviation not in existing_abbreviations and not is_real_word(abbreviation):
-        return abbreviation
+    base_abbreviation = abbreviation
+    counter = 1
+    while abbreviation in existing_abbreviations or abbreviation in english_words:
+        abbreviation = f"{base_abbreviation}{counter}"
+        counter += 1
+    
+    existing_abbreviations.add(abbreviation)
+    return abbreviation
 
-    # Try first letter + next vowel
-    if len(original) > 2:
-        abbreviation = (original[0] + next_vowel(original)).lower()
-        if abbreviation not in existing_abbreviations and not is_real_word(abbreviation):
-            return abbreviation
-
-    # Append numbers (1-9), then double digits as last case
-    for i in range(1, 100):
-        new_abbreviation = f"{abbreviation}{i}"
-        if new_abbreviation not in existing_abbreviations:
-            return new_abbreviation
 
 def find_common_phrases(text, max_length=7, min_frequency=2):
     tokens = word_tokenize(text.lower())
@@ -142,7 +147,7 @@ def process_text(text):
     existing_abbreviations = set()
     abbreviations = {}
     for phrase, freq in common_phrases_with_freq.items():
-        abbreviation = unique_abbreviation(phrase, existing_abbreviations)
+        abbreviation = unique_abbreviation(phrase, existing_abbreviations, english_words)
         existing_abbreviations.add(abbreviation)
         abbreviations[phrase] = (abbreviation, freq)
     
@@ -229,11 +234,16 @@ def generate_plist_content(df):
     
     return xml_str
 
+"""
+ For this I really want to offer the option of adding to this 
+ https://www.autohotkey.com/boards/viewtopic.php?f=83&t=120220&start=60#p565896
+"""
 def generate_ahk_script(df):
     script_lines = []
     for _, row in df.iterrows():
         script_line = f"::{row['Abbreviation']}::{row['Original']}"
         script_lines.append(script_line)
+    script_lines.append(":?*:altion::lation")
     return "\n".join(script_lines)
 
 # Streamlit UI code for uploading files and displaying results
