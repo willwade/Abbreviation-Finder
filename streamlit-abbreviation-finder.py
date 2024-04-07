@@ -114,17 +114,29 @@ def generate_abbreviation(word_or_phrase):
     
     return abbreviation
 
-def unique_abbreviation(original, existing_abbreviations, english_words):
+def unique_abbreviation(original, existing_abbreviations, english_words, avoid_numbers=False):
     abbreviation = generate_abbreviation(original)
     base_abbreviation = abbreviation
     counter = 1
+    
     while abbreviation in existing_abbreviations or abbreviation in english_words:
-        abbreviation = f"{base_abbreviation}{counter}"
+        if avoid_numbers:
+            # Attempt to modify the abbreviation without using numbers
+            if len(base_abbreviation) >= counter:
+                # Add an additional letter from the original word or repeat the last letter
+                next_letter = base_abbreviation[counter % len(base_abbreviation)]
+                abbreviation += next_letter
+            else:
+                # Fallback to repeating the last letter if no more unique letters are available
+                abbreviation += base_abbreviation[-1]
+        else:
+            # Use numbers to ensure uniqueness
+            abbreviation = f"{base_abbreviation}{counter}"
+        
         counter += 1
     
     existing_abbreviations.add(abbreviation)
     return abbreviation
-
 
 def find_common_phrases(text, max_length=7, min_frequency=2):
     tokens = word_tokenize(text.lower())
@@ -148,7 +160,7 @@ def process_text(text):
     existing_abbreviations = set()
     abbreviations = {}
     for phrase, freq in common_phrases_with_freq.items():
-        abbreviation = unique_abbreviation(phrase, existing_abbreviations, english_words)
+        abbreviation = unique_abbreviation(word, existing_abbreviations, english_words, avoid_numbers)
         existing_abbreviations.add(abbreviation)
         abbreviations[phrase] = (abbreviation, freq)
     
@@ -256,7 +268,7 @@ st.markdown("""
     **NB: We don't save your uploaded documents - we just parse them then display the summarised data here**
 """)
 uploaded_files = st.file_uploader("Choose text files", accept_multiple_files=True, type=['txt', 'docx', 'pdf', 'rtf', 'odt'])
-
+avoid_numbers = st.checkbox("No numbers in abbreviations", value=False)
 
 if uploaded_files:
     combined_text = read_and_combine_texts(uploaded_files)
