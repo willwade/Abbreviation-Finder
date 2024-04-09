@@ -593,10 +593,6 @@ def generate_espanso_yaml_content(df, abbreviation_column):
     
     return yaml_content
 
-
-# For this I really want to offer the option of adding to this 
-# https://www.autohotkey.com/boards/viewtopic.php?f=83&t=120220&start=60#p565896
-
 def generate_ahk_script(df, abbreviation_column):
     script_lines = []
     for _, row in df.iterrows():
@@ -612,11 +608,12 @@ def generate_ahk_script(df, abbreviation_column):
 st.title('Abbreviation Suggestion Tool')
 st.markdown("""
     This tool helps you generate abbreviations for long words or phrases, making your typing faster and more efficient. 
-    Upload your documents, and the tool will analyze the text to suggest useful abbreviations. Use the filters to include your likely abbreviations based on frequency found in your text. 
-    You can then download these abbreviations in CSV format, a plist file for [Mac/iOS text replacements](https://support.apple.com/en-gb/guide/mac-help/mchl2a7bd795/mac) or as a [autohotkey](https://www.autohotkey.com) file.
+    Upload your documents, and the tool will analyse the text to suggest valuable abbreviations. Use the filters to include your likely abbreviations based on frequency found in your text. 
+    You can then download these abbreviations in a range of formats. 
+
     Want more ideas why abbreviations might be useful? Have a read of [this](https://blog.abreevy8.io/you-dont-have-to-type-faster-to-type-faster/). Bear in mind though the cognitive effort to learn these abbreviations. 
-    Use avoid numbers if you don't want numbers in your abbreviations. Often useful for AAC devices. 
-    The layout option is really for those who use assistive technology who may have an alternative way of entering text. We are attempting to create quicker shortcuts. Your mileage may vary!
+    There are some options really designed for users who use Assistive Technology to communicate. Your mileage may vary!
+    
     **NB: We don't save your uploaded documents - we just parse them then display the summarised data here.**
 """)
 uploaded_files = st.file_uploader("Choose text files", accept_multiple_files=True, type=['txt', 'docx', 'pdf', 'rtf', 'odt'])
@@ -679,7 +676,7 @@ if uploaded_files:
     st.dataframe(df_filtered, width=700, hide_index=True)
 
     user_typing_speed = st.number_input("Enter your typing speed (WPM)*:", min_value=1, max_value=100, value=40, step=1)
-    st.caption("* This can be calculated by you using whatever system you write with and use sentences or words approach at [typefast.io](http://typefast.io)")
+    st.caption("This can be calculated by you using whatever system you write with and use sentences or words approach at [typefast.io](http://typefast.io)")
     for top_n in [10, 50]:
         total_savings, percentage_increase = calculate_savings(df_filtered, top_n, selected_column, user_typing_speed)
         st.write(f"By learning the top {top_n} abbreviations, you would save {total_savings} keystrokes, "
@@ -704,6 +701,8 @@ if uploaded_files:
             file_name='Text Substitutions.plist',
             mime='application/x-plist'
         )
+        st.caption("[See this guide](https://support.apple.com/en-gb/guide/mac-help/mchl2a7bd795/mac) on how to use for MacOS ")
+
         ahk_script_content = generate_ahk_script(df_filtered,selected_column)
         st.download_button(
             label="⊞ Download as AutoHotkey Script",
@@ -711,7 +710,8 @@ if uploaded_files:
             file_name='abbreviations.ahk',
             mime='text/plain'
         )
-
+        st.caption("Use this with [AutoHotKey on Windows](https://www.autohotkey.com) on its own or as part of a bigger tool  e.g this [AutoCorrectTool](https://www.autohotkey.com/boards/viewtopic.php?f=83&t=120220&start=60#p565896)")
+        
         yaml_content = generate_espanso_yaml_content(df_filtered,selected_column) 
         st.download_button(
             label="Download for Espanso",
@@ -719,7 +719,7 @@ if uploaded_files:
             file_name='personal_abbreviations.yaml',
             mime='text/yaml'
         )
-        st.caption("Espanso is a free and opensource tool for abbreviation expansion and much more. Its cross platform. Check it out at https://espanso.org")
+        st.caption("[Espanso](https://espanso.org) is a free and opensource tool for abbreviation expansion and much more. Its cross platform. Check it out. ")
 
 
     else:
