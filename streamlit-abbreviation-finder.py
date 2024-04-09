@@ -12,6 +12,7 @@ import textract
 import tempfile
 import xml.etree.ElementTree as ET
 import re
+import string
 
 # Ensure necessary NLTK resources are downloaded
 nltk.download('punkt')
@@ -360,31 +361,78 @@ def generate_proximity_based_abbreviation(word_or_phrase, layout, existing_abbre
     existing_abbreviations.add(abbreviation)
     return abbreviation
 
-def generate_abbreviation(word_or_phrase, existing_abbreviations, prepend_option=False):
-    if ' ' in word_or_phrase:  # It's a phrase
-        abbreviation = ''.join(word[0] for word in word_or_phrase.split()).lower()
-    else:  # It's a single word
-        syllable_initials = heuristic_syllables(word_or_phrase)
-        abbreviation = ''.join(syllable_initials)
+def generate_truncated_abbreviation(word_or_phrase):
+    """Generate a truncated abbreviation by using the first three letters of every word.
+    If a word has fewer than three letters, use the first and last letter."""
+    def truncate_word(word):
+        if len(word) >= 3:
+            return word[:3]
+        else:
+            # For words with fewer than three letters, use the first and last letter
+            # If the word is a single letter, it will simply duplicate that letter
+            return word[0] + word[-1]
+    return ''.join(truncate_word(word) for word in word_or_phrase.split()).lower()
 
-    # Initial checks for abbreviation length and uniqueness
-    if abbreviation not in existing_abbreviations and (not is_real_word(abbreviation) or prepend_option) and len(abbreviation) < len(word_or_phrase):
-        existing_abbreviations.add(abbreviation)
-        return abbreviation
+def generate_contracted_abbreviation(word_or_phrase):
+    """Generate a contracted abbreviation by using the first letter, a middle consonant, and the last letter."""
+    def contract_word(word):
+        if len(word) > 3:
+            # Find a middle consonant, if available
+            consonants = [char for char in word[1:-1] if char.lower() not in 'aeiou']
+            middle = consonants[len(consonants) // 2] if consonants else word[1]
+            return f"{word[0]}{middle}{word[-1]}"
+        else:
+            return word
+    return ''.join(contract_word(word) for word in word_or_phrase.split()).lower()
 
-    # Adjust abbreviation to ensure uniqueness and shorter than the original word
+def generate_abbreviation(word_or_phrase, existing_abbreviations, prepend_option=False, no_numbers=False):
+    debug = False  # Set to True to enable debug output
+    abbreviation_methods = [heuristic_syllables, generate_truncated_abbreviation, generate_contracted_abbreviation]
+    abbreviation = ""
+
+    # Ensure existing_abbreviations is a set for efficient lookups
+    existing_abbreviations = set(existing_abbreviations)
+
+    # Try each abbreviation method in order
+    for method in abbreviation_methods:
+        temp_abbr = method(word_or_phrase) if method != heuristic_syllables else ''.join(method(word_or_phrase))
+        if debug: print(f"{method.__name__}: {temp_abbr}")
+        if temp_abbr not in existing_abbreviations and not is_real_word(temp_abbr):
+            abbreviation = temp_abbr
+            break  # Found a suitable abbreviation
+
+    # If abbreviation is empty or not unique/real word, modify further
+    if not abbreviation or abbreviation in existing_abbreviations or is_real_word(abbreviation):
+        abbreviation = word_or_phrase[0]  # Start with the first letter
+        if debug: print(f"Initial abbreviation: {abbreviation}")
+
+    original_abbreviation = abbreviation
     counter = 1
-    while True:
-        if len(abbreviation) >= len(word_or_phrase):
-            # Ensure abbreviation doesn't exceed the original word length
-            abbreviation = abbreviation[:len(word_or_phrase)-1]
-        new_abbreviation = abbreviation + (word_or_phrase[counter] if counter < len(word_or_phrase) else str(counter))
-        if new_abbreviation not in existing_abbreviations and (not is_real_word(new_abbreviation) or prepend_option) and len(new_abbreviation) < len(word_or_phrase):
-            existing_abbreviations.add(new_abbreviation)
-            return new_abbreviation
+    alphabet = string.ascii_lowercase
+
+    while abbreviation in existing_abbreviations or is_real_word(abbreviation) or len(abbreviation) >= len(word_or_phrase):
+        if no_numbers:
+            # Cycle through the alphabet for additional characters
+            next_char = alphabet[(counter - 1) % len(alphabet)]
+        else:
+            # Append numbers to ensure uniqueness
+            next_char = str(counter)
+        
+        # Attempt to make abbreviation unique and not a real word
+        new_abbreviation = original_abbreviation + next_char
+        if new_abbreviation not in existing_abbreviations and not is_real_word(new_abbreviation):
+            abbreviation = new_abbreviation
+            break  # Found a suitable abbreviation
+        
+        if debug: print(f"Trying abbreviation: {abbreviation}, Counter: {counter}")
         counter += 1
         if counter > 100:  # Prevent infinite loops
+            print("Reached counter limit, breaking loop.")
             break
+
+    existing_abbreviations.add(abbreviation)
+    return abbreviation
+
 
 def generate_all_abbreviations(text, layouts, prepend=False):
     # Tokenize the text and filter out stopwords
@@ -408,9 +456,14 @@ def generate_all_abbreviations(text, layouts, prepend=False):
         # Reset existing abbreviations for each type
         existing_standard_abbr = set()
         standard_abbr = generate_abbreviation(original, existing_standard_abbr, prepend)
+        standard_abbr_nonum = generate_abbreviation(original, existing_standard_abbr, prepend, True)
 
         existing_syllable_abbr = set()
         syllable_abbr = generate_syllable_abbreviation(original, existing_syllable_abbr,prepend) if ' ' not in original else standard_abbr
+
+        truncated_abbr = generate_truncated_abbreviation(original)
+        contracted_abbr = generate_contracted_abbreviation(original)
+
 
         # Generate proximity-based abbreviations for each layout, with separate tracking
         proximity_abbrs = {}
@@ -422,7 +475,10 @@ def generate_all_abbreviations(text, layouts, prepend=False):
             'Original': original,
             'Frequency': freq,
             'Standard': standard_abbr,
+            'Standard-No Numbers':standard_abbr_nonum,
             'Syllable': syllable_abbr,
+            'Truncated': truncated_abbr,
+            'Contracted': contracted_abbr,
             **proximity_abbrs
         })
 
@@ -614,6 +670,8 @@ st.markdown("""
     Want more ideas why abbreviations might be useful? Have a read of [this](https://blog.abreevy8.io/you-dont-have-to-type-faster-to-type-faster/). Bear in mind though the cognitive effort to learn these abbreviations. 
     There are some options really designed for users who use Assistive Technology to communicate. Your mileage may vary!
     
+    What is the easiest abbreviation style to learn? Well its a personal choice but [this paper](https://pubmed.ncbi.nlm.nih.gov/2148561/) found truncation marginally easier. 
+    
     **NB: We don't save your uploaded documents - we just parse them then display the summarised data here.**
 """)
 uploaded_files = st.file_uploader("Choose text files", accept_multiple_files=True, type=['txt', 'docx', 'pdf', 'rtf', 'odt'])
@@ -623,55 +681,63 @@ if uploaded_files:
 
 if uploaded_files:
     combined_text = read_and_combine_texts(uploaded_files)
+    # Generate abbreviations without prepend logic
     df_all_variants = generate_all_abbreviations(combined_text, layout_mapping, prepend=False)
     df_all_variants_prepend = generate_all_abbreviations(combined_text, layout_mapping, prepend=True)
-    prepend_option = st.checkbox("Prepend backslash to abbreviations", value=False)
-    
-    avoid_numbers_option = st.checkbox("Remove numbers in abbreviations", value=False)
-    use_proximity = st.checkbox("Create abbreviations based on letter proximity", value=False)
+
+    abbreviation_options = ["Standard", "Standard-No Numbers", "Syllable", "Truncated", "Contracted", "Positional"]
+    selected_abbreviation_strategy = st.selectbox("Select abbreviation strategy:", options=abbreviation_options, index=0)
+    st.caption("Standard tries to use Syllable techniques then truncation and then contraction. It tries to minimise having duplicate abbreviations. Other techniques will add numbers to abbreviations if they are dupliicated. Some studies suggest Truncation is easier to learn")
+   
     layout_option = None
+    if selected_abbreviation_strategy == "Positional":
+        layout_option = st.selectbox("Choose your keyboard/access layout", options=list(layout_mapping.keys()))
     
-    if use_proximity:
-        layout_option = st.selectbox(
-            "Choose your keyboard/access layout",
-            list(layout_mapping.keys())
-        )
+    prepend_options = {
+        "None": "",
+        "Backslash (\\)": "\\",
+        "Comma (,)": ",",
+        "Full stop (.)": "."
+    }
+    prepend_choice = st.selectbox(
+        "Choose a character to prepend to abbreviations:",
+        options=list(prepend_options.keys()),
+        index=0  # Default to "None"
+    )    
+    st.caption("Some systems push a user to use a backslah or other character. Some people prefer comma abbreviation as its quicker and unlikely. Just consider how it may work with your abbreviation software ")
+
+    # Get the actual character to prepend based on the user's choice
+    prepend_character = prepend_options[prepend_choice]
     
-    filter_option = st.selectbox(
-        "Select items to display:",
-        ('All', 'Just Phrases', 'Just Words'),
-        index=0  # Default to showing 'All'
-    )
+
+    filter_option = st.selectbox("Select items to display:", ('All', 'Just Phrases', 'Just Words'), index=0)
     min_frequency = st.slider("Minimum frequency", min_value=1, max_value=10, value=1)
+    min_word_length = st.selectbox(
+        "Only consider words of at least this length:",
+        options=[0, 3, 4, 5],
+        index=1,  # Default to ignoring words less than 3 letters long
+        format_func=lambda x: f"{x} letters" if x > 0 else "No filter"
+    )
+
     
-    # Filter the DataFrame based on user selections
-    # This is a simplified example; you'll need to adjust it based on your actual DataFrame structure
-    if use_proximity and layout_option:
-        selected_column = layout_option
+    # Determine the selected column based on the strategy and layout option
+    selected_column = selected_abbreviation_strategy if selected_abbreviation_strategy != "Positional" else layout_option
+    
+    # Filter and sort the DataFrame based on user selections
+    if prepend_character:
+        df_filtered = df_all_variants_prepend[['Original', selected_column, 'Frequency']]
     else:
-        selected_column = 'Standard' if not avoid_numbers_option else 'Syllable'
-    
-    # Assuming df_all_variants contains all your abbreviation columns
-    if prepend_option:
-        # Define the columns to which the prepend logic should be applied
-        abbreviation_columns = ['Standard', 'Syllable'] + list(layout_mapping.keys())
+        df_filtered = df_all_variants[['Original', selected_column, 'Frequency']]
         
-        # Apply the prepend logic to each relevant column
-        for column in abbreviation_columns:
-            if column in df_all_variants.columns:  # Check if the column exists in the DataFrame
-                df_all_variants[column] = df_all_variants_prepend[column].apply(lambda x: '\\' + x if not x.startswith('\\') else x)
-    
-    # After updating df_all_variants with the prepend logic, proceed with filtering
-    selected_column = 'Standard' if not avoid_numbers_option else 'Syllable'
-    if use_proximity and layout_option:
-        selected_column = layout_option
-    
-    # Filter based on user selection
-    df_filtered = df_all_variants[['Original', selected_column, 'Frequency']]
-    df_filtered = df_filtered.sort_values(by='Frequency', ascending=False)
     df_filtered = df_filtered[df_filtered['Frequency'] >= min_frequency]
-    df_filtered = filter_df(df_filtered, filter_option)
-    
+    df_filtered = filter_df(df_filtered, filter_option).sort_values(by='Frequency', ascending=False)
+    if min_word_length > 0:
+        df_filtered = df_filtered[df_filtered['Original'].apply(lambda x: len(x) >= min_word_length or ' ' in x)]
+
+    # Apply the prepend logic to the selected column if the option is selected
+    if prepend_character:
+        df_filtered[selected_column] = df_filtered[selected_column].apply(lambda x: prepend_character + x if x and not x.startswith(prepend_character) else x)
+
     # Display the DataFrame without the index
     st.dataframe(df_filtered, width=700, hide_index=True)
 
