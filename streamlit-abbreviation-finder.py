@@ -523,24 +523,22 @@ def adjust_abbreviations_for_prepend(df, prepend_option):
     return df
 
 
-def calculate_savings(df, top_n, abbreviation_column):
+def calculate_savings(df, top_n, abbreviation_column, user_typing_speed):
     # Assume each word is 5 keystrokes on average
     avg_keystrokes_per_word = 5
     # Calculate keystroke savings for the top N abbreviations
-    # Create an explicit copy of the DataFrame slice to avoid SettingWithCopyWarning
     df = df.copy()
-    # Now, you can safely modify the DataFrame
     df.loc[:, 'Keystroke Savings'] = df['Original'].apply(lambda x: len(x) if x is not None else 0) - df[abbreviation_column].apply(lambda x: len(x) if x is not None else 0)
     total_savings = df.head(top_n)['Keystroke Savings'].sum()
     # Calculate the average savings per word
     avg_savings_per_word = total_savings / top_n
     # Estimate the increase in "words" that could be typed per minute
     additional_words_per_minute = avg_savings_per_word / avg_keystrokes_per_word
-    # Assuming an average typing speed of 40 WPM
-    avg_typing_speed = 40
+    # Use the user's actual typing speed instead of assuming an average typing speed of 40 WPM
     # Calculate the percentage increase in WPM
-    percentage_increase = (additional_words_per_minute / avg_typing_speed) * 100
+    percentage_increase = (additional_words_per_minute / user_typing_speed) * 100
     return total_savings, percentage_increase
+
 
 def convert_to_csv(df, abbreviation_column):
     """
@@ -657,11 +655,10 @@ if uploaded_files:
     # Display the DataFrame without the index
     st.dataframe(df_filtered, width=700, hide_index=True)
 
-    print(df_filtered.columns)  # Check all column names
-    print(selected_column)  # Verify the column name being accessed
-
+    user_typing_speed = st.number_input("Enter your typing speed (WPM)*:", min_value=1, max_value=100, value=40, step=1)
+    st.caption("* This can be calculated by you using whatever system you write with and use sentences or words approach at [typefast.io](http://typefast.io)")
     for top_n in [10, 50]:
-        total_savings, percentage_increase = calculate_savings(df_filtered, top_n, selected_column)
+        total_savings, percentage_increase = calculate_savings(df_filtered, top_n, selected_column, user_typing_speed)
         st.write(f"By learning the top {top_n} abbreviations, you would save {total_savings} keystrokes, "
                  f"leading to an increase in WPM rate by approximately {percentage_increase:.2f}%.")
     
