@@ -395,7 +395,7 @@ def generate_all_abbreviations(text, layouts, prepend=False):
     token_frequency = Counter(filtered_tokens)
 
     # Find common phrases and calculate their frequencies
-    common_phrases_with_freq = find_common_phrases(text, max_length=7, min_frequency=2)
+    common_phrases_with_freq = find_common_phrases(text, max_length=15, min_frequency=2)
     # Combine token and phrase frequencies
     all_frequencies = {**common_phrases_with_freq, **token_frequency}
 
@@ -456,7 +456,7 @@ def unique_abbreviation(original, existing_abbreviations, english_words, avoid_n
     existing_abbreviations.add(abbreviation)
     return abbreviation
 
-def find_common_phrases(text, max_length=7, min_frequency=2):
+def find_common_phrases(text, max_length=15, min_frequency=2):
     tokens = word_tokenize(text.lower())
     stop_words = set(stopwords.words('english'))
     tokens = [token for token in tokens if token.isalpha() and token not in stop_words]
@@ -472,7 +472,7 @@ def find_common_phrases(text, max_length=7, min_frequency=2):
 
 def process_text(text,avoid_numbers=False):
     # Find common phrases and their frequencies
-    common_phrases_with_freq = find_common_phrases(text, max_length=7, min_frequency=2)
+    common_phrases_with_freq = find_common_phrases(text, max_length=15, min_frequency=2)
     
     # Generate abbreviations for common phrases
     existing_abbreviations = set()
