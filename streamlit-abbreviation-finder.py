@@ -687,7 +687,7 @@ if uploaded_files:
 
     abbreviation_options = ["Standard", "Standard-No Numbers", "Syllable", "Truncated", "Contracted", "Positional"]
     selected_abbreviation_strategy = st.selectbox("Select abbreviation strategy:", options=abbreviation_options, index=0)
-    st.caption("Standard tries to use Syllable techniques then truncation and then contraction. It tries to minimise having duplicate abbreviations. Other techniques will add numbers to abbreviations if they are dupliicated. Some studies suggest Truncation is easier to learn")
+    st.caption("Standard tries to use Syllable techniques then truncation and then contraction. It tries to minimise having duplicate abbreviations. Other techniques will add numbers to abbreviations if they are dupliicated. Some studies suggest Truncation is easier to learn but note its fixed at 3 letters per word. If you want two-letter abbreviations use Syllable")
    
     layout_option = None
     if selected_abbreviation_strategy == "Positional":
