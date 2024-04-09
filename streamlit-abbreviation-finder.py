@@ -692,7 +692,8 @@ if uploaded_files:
     layout_option = None
     if selected_abbreviation_strategy == "Positional":
         layout_option = st.selectbox("Choose your keyboard/access layout", options=list(layout_mapping.keys()))
-    
+        st.caption("This is very questionnable particulaly for scanning systems where you generally dont carry on from the last letter selected direct selection for QWERTY etc does make some logical sense")
+
     prepend_options = {
         "None": "",
         "Backslash (\\)": "\\",
