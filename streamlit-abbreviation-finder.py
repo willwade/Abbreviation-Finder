@@ -570,6 +570,29 @@ def generate_plist_content(df, abbreviation_column):
     
     return xml_str
 
+def generate_espanso_yaml_content(df, abbreviation_column):
+    yaml_content = "# espanso match file\n\n"
+    yaml_content += "# For a complete introduction, visit the official docs at: https://espanso.org/docs/\n\n"
+    yaml_content += "# Matches are substitution rules: when you type the \"trigger\" string\n"
+    yaml_content += "# it gets replaced by the \"replace\" string.\n"
+    yaml_content += "matches:\n"
+    
+    for _, row in df.iterrows():
+        # Skip rows where the abbreviation is None
+        if row[abbreviation_column] is None:
+            continue
+        trigger = row[abbreviation_column].lstrip('\\') if row[abbreviation_column] else ""
+        # Skip processing this row if trigger is empty after stripping
+        if not trigger:
+            continue
+        replacement_text = row['Original']
+        yaml_content += f"  - trigger: \":{trigger}\"\n"
+        yaml_content += f"    replace: \"{replacement_text}\"\n"
+    
+    yaml_content += "..."
+    
+    return yaml_content
+
 
 # For this I really want to offer the option of adding to this 
 # https://www.autohotkey.com/boards/viewtopic.php?f=83&t=120220&start=60#p565896
@@ -688,6 +711,16 @@ if uploaded_files:
             file_name='abbreviations.ahk',
             mime='text/plain'
         )
+
+        yaml_content = generate_espanso_yaml_content(df_filtered,selected_column) 
+        st.download_button(
+            label="Download for Espanso",
+            data=yaml_content,
+            file_name='personal_abbreviations.yaml',
+            mime='text/yaml'
+        )
+        st.caption("Espanso is a free and opensource tool for abbreviation expansion and much more. Its cross platform. Check it out at https://espanso.org")
+
 
     else:
         st.write("No suggestions could be generated.")
