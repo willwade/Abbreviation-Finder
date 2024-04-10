@@ -222,8 +222,14 @@ def read_text(uploaded_file):
     with tempfile.NamedTemporaryFile(delete=False, suffix='.' + uploaded_file.name.split('.')[-1]) as tmp_file:
         tmp_file.write(uploaded_file.getvalue())
         tmp_file_path = tmp_file.name
-    text = textract.process(tmp_file_path, encoding='utf-8')
-    return text.decode('utf-8')
+    try:
+        text = textract.process(tmp_file_path, encoding='utf-8')
+        return text.decode('utf-8')
+    except textract.exceptions.ShellError as e:
+        print(f"Error processing file {uploaded_file.name}: {e}")
+        # Handle the error, e.g., by logging it or returning a default message
+        return "Error processing file. Please ensure it's a supported format."
+
 
 
 def normalize_and_count(words):
@@ -675,9 +681,6 @@ st.markdown("""
     **NB: We don't save your uploaded documents - we just parse them then display the summarised data here.**
 """)
 uploaded_files = st.file_uploader("Choose text files", accept_multiple_files=True, type=['txt', 'docx', 'pdf', 'rtf', 'odt'])
-
-if uploaded_files:
-    combined_text = read_and_combine_texts(uploaded_files)
 
 if uploaded_files:
     combined_text = read_and_combine_texts(uploaded_files)

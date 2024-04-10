@@ -3,3 +3,5 @@ pandas
 nltk
 chardet
 textract
+pdftotext
+tesseract-ocr 
