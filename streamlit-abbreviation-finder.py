@@ -642,7 +642,7 @@ def generate_espanso_yaml_content(df, abbreviation_column):
         if not trigger:
             continue
         replacement_text = row['Original']
-        yaml_content += f"  - trigger: \":{trigger}\"\n"
+        yaml_content += f"  - trigger: \"{trigger}\"\n"
         yaml_content += f"    replace: \"{replacement_text}\"\n"
     
     yaml_content += "..."
@@ -696,6 +696,7 @@ if uploaded_files:
 
     prepend_options = {
         "None": "",
+        "Colon (:)": ":",
         "Backslash (\\)": "\\",
         "Comma (,)": ",",
         "Full stop (.)": "."
@@ -783,7 +784,7 @@ if uploaded_files:
         st.download_button(
             label="Download for Espanso",
             data=yaml_content,
-            file_name='personal_abbreviations.yaml',
+            file_name='personal_abbreviations.yml',
             mime='text/yaml'
         )
         st.caption("[Espanso](https://espanso.org) is a free and opensource tool for abbreviation expansion and much more. Its cross platform. Check it out. ")
