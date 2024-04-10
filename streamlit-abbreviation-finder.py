@@ -648,8 +648,8 @@ def generate_espanso_yaml_content(df, abbreviation_column):
         if not trigger:
             continue
         replacement_text = row['Original']
-        yaml_content += f"  - trigger: {trigger}\n"
-        yaml_content += f"    replace: {replacement_text}\n"
+        yaml_content += f"  - trigger: \"{trigger}\"\n"
+        yaml_content += f"    replace: \"{replacement_text}\"\n"
     
     yaml_content += "..."
     
