@@ -232,89 +232,106 @@ def read_text(uploaded_file):
 
 
 
-def normalize_and_count(words):
-    """
-    Normalize words to lowercase for counting, but store the most common case (uppercase/lowercase) for each word.
-    """
-    lowercase_counts = Counter([word.lower() for word in words])
-    case_counts = defaultdict(Counter)
-    for word in words:
-        case_counts[word.lower()][word] += 1
-    # Choose the most common case for each word
-    chosen_cases = {word: case_counts[word].most_common(1)[0][0] for word in lowercase_counts}
-    return chosen_cases, lowercase_counts
+def make_abbreviation_unique(abbreviation, original_word, existing_abbreviations, prepend=False, use_numbers=False, current_method=None):
+    if abbreviation not in existing_abbreviations and (prepend or not is_real_word(abbreviation)):
+        existing_abbreviations.add(abbreviation)
+        return abbreviation
 
-
-def heuristic_syllables(word):
-    # This is a placeholder for your syllable detection logic
-    syllables = re.findall(r'[bcdfghjklmnpqrstvwxyz]*[aeiouy]+', word.lower())
-    return [syl[0] for syl in syllables] if syllables else []
-    
-def generate_syllable_abbreviation(phrase, existing_abbreviations, prepend=False):
-    words = phrase.split()
-    abbreviation = ''
-    for word in words:
-        syllables = heuristic_syllables(word)
-        if syllables:
-            # Use up to the first two characters of the first syllable
-            abbreviation += syllables[0][:2]
-        else:
-            # Fallback if no syllables are found
-            abbreviation += word[:2].lower()
-
-    # Ensure uniqueness and adjust if necessary
     original_abbreviation = abbreviation
     counter = 1
+    alphabet = string.ascii_lowercase
+
     while abbreviation in existing_abbreviations or (not prepend and is_real_word(abbreviation)):
-        if len(abbreviation) >= len(phrase):
-            # Ensure abbreviation doesn't exceed the original phrase length
-            abbreviation = original_abbreviation[:max(1, len(phrase)-1)]  # Ensure at least 1 character
-        new_abbreviation = abbreviation + (phrase[counter] if counter < len(phrase) else str(counter))
-        if new_abbreviation not in existing_abbreviations and (not is_real_word(new_abbreviation) or prepend):
-            existing_abbreviations.add(new_abbreviation)
-            return new_abbreviation
+        if current_method == 'syllable':
+            # Increase the max_length for syllable abbreviation generation
+            abbreviation = generate_syllable_abbreviation(original_word, len(original_abbreviation) + counter)
+        else:
+            if use_numbers:
+                # Append a number to ensure uniqueness
+                abbreviation = f"{original_abbreviation}{counter}"
+            else:
+                # Cycle through the alphabet for additional characters
+                next_char = alphabet[counter % len(alphabet)]
+                abbreviation = f"{original_abbreviation}{next_char}"
+
+        # Check if the new abbreviation is unique
+        if abbreviation not in existing_abbreviations and (prepend or not is_real_word(abbreviation)):
+            existing_abbreviations.add(abbreviation)
+            return abbreviation
+
         counter += 1
-        if counter > 100:  # Prevent infinite loops
+        if counter > 100:  # Safety check to prevent infinite loops
             break
 
-    existing_abbreviations.add(abbreviation)
-    return abbreviation
+    # Fallback in case a unique abbreviation couldn't be found
+    return original_abbreviation
 
 
-def generate_unique_abbreviations(words):
-    """
-    Generate unique abbreviations for a list of words, ensuring no conflicts.
-    """
-    chosen_cases, counts = normalize_and_count(words)
-    abbreviations = {}
-    used_abbreviations = set()
     
-    for word, _ in counts.most_common():  # Process words by frequency
-        base_word = chosen_cases[word]
-        abbreviation = base_word[:2].lower()
-        # Ensure the abbreviation is unique
-        original_abbreviation = abbreviation
-        i = 2
-        while abbreviation in used_abbreviations:
-            i += 1
-            abbreviation = (base_word[:i] + base_word[-1]).lower()[:2]  # Try a new abbreviation
-            if i > len(base_word):  # Fallback if we run out of letters
-                abbreviation = original_abbreviation + str(len(used_abbreviations))
-        
-        used_abbreviations.add(abbreviation)
-        abbreviations[base_word] = abbreviation
-    
-    return abbreviations
+def generate_truncated_abbreviation(word_or_phrase):
+    """Generate a truncated abbreviation by using the first three letters of every word.
+    If a word has fewer than three letters, use the first and last letter."""
+    def truncate_word(word):
+        if len(word) >= 3:
+            return word[:3]
+        else:
+            # For words with fewer than three letters, use the first and last letter
+            # If the word is a single letter, it will simply duplicate that letter
+            return word[0] + word[-1]
+    return ''.join(truncate_word(word) for word in word_or_phrase.split()).lower()
 
+
+def generate_contracted_abbreviation(word_or_phrase):
+    """Generate a contracted abbreviation by using the first letter, a middle consonant, and the last letter."""
+    def contract_word(word):
+        if len(word) > 3:
+            # Find a middle consonant, if available
+            consonants = [char for char in word[1:-1] if char.lower() not in 'aeiou']
+            middle = consonants[len(consonants) // 2] if consonants else word[1]
+            return f"{word[0]}{middle}{word[-1]}"
+        else:
+            return word
+    return ''.join(contract_word(word) for word in word_or_phrase.split()).lower()
+
+
+def count_syllables(word):
+    # Approximate syllable count in an English word.
+    # Source for basic idea: https://stackoverflow.com/questions/405161/detecting-syllables-in-a-word
+    word = word.lower().strip(".:;?!")
+    if len(word) <= 3:
+        return 1  # A word of 3 or fewer letters counts as one syllable
+    word = re.sub(r'[^a-zA-Z]', '', word)  # Removing non-letters
+    word = re.sub(r'ed$', '', word)  # Removing silent 'e' at the end
+    word = re.sub(r'e$', '', word)  # Removing silent 'e' at the end
+    vowels = "aeiouy"
+    syllable_count = 0
+    if word[0] in vowels:
+        syllable_count += 1  # Word starts with a vowel
+    for index in range(1, len(word)):
+        if word[index] in vowels and word[index - 1] not in vowels:
+            syllable_count += 1
+    if word.endswith("le") and len(word) > 2 and word[-3] not in vowels:
+        syllable_count += 1
+    return max(1, syllable_count)
+
+def generate_syllable_abbreviation(phrase, max_length=3):
+    abbreviation = ''
+    words = phrase.split()
+    for word in words:
+        syllable_count = count_syllables(word)
+        if len(abbreviation) < max_length:
+            # Distribute the selection of letters more evenly across the word's length
+            step = max(1, len(word) // syllable_count)
+            for i in range(0, min(len(word), syllable_count * step), step):
+                abbreviation += word[i]
+                if len(abbreviation) == max_length:
+                    break
+        if len(abbreviation) == max_length:
+            break
+    return abbreviation.lower()[:max_length]
 
 def is_real_word(abbreviation):
     return abbreviation.lower() in english_words
-
-def next_vowel(word):
-    for letter in word[1:]:
-        if letter.lower() in 'aeiou':
-            return letter
-    return ''
 
 def generate_proximity_based_abbreviation(word_or_phrase, layout, existing_abbreviations, prepend):
     # Start with the standard abbreviation logic
@@ -322,7 +339,7 @@ def generate_proximity_based_abbreviation(word_or_phrase, layout, existing_abbre
         abbreviation = ''.join(word[0] for word in word_or_phrase.split()).lower()
     else:
         # Single word, attempt to use syllables
-        syllable_initials = heuristic_syllables(word_or_phrase)
+        syllable_initials = generate_syllable_abbreviation(word_or_phrase,2)
         abbreviation = ''.join(syllable_initials)
 
     # If prepend is True, skip the length and english_words check
@@ -367,33 +384,10 @@ def generate_proximity_based_abbreviation(word_or_phrase, layout, existing_abbre
     existing_abbreviations.add(abbreviation)
     return abbreviation
 
-def generate_truncated_abbreviation(word_or_phrase):
-    """Generate a truncated abbreviation by using the first three letters of every word.
-    If a word has fewer than three letters, use the first and last letter."""
-    def truncate_word(word):
-        if len(word) >= 3:
-            return word[:3]
-        else:
-            # For words with fewer than three letters, use the first and last letter
-            # If the word is a single letter, it will simply duplicate that letter
-            return word[0] + word[-1]
-    return ''.join(truncate_word(word) for word in word_or_phrase.split()).lower()
-
-def generate_contracted_abbreviation(word_or_phrase):
-    """Generate a contracted abbreviation by using the first letter, a middle consonant, and the last letter."""
-    def contract_word(word):
-        if len(word) > 3:
-            # Find a middle consonant, if available
-            consonants = [char for char in word[1:-1] if char.lower() not in 'aeiou']
-            middle = consonants[len(consonants) // 2] if consonants else word[1]
-            return f"{word[0]}{middle}{word[-1]}"
-        else:
-            return word
-    return ''.join(contract_word(word) for word in word_or_phrase.split()).lower()
 
 def generate_abbreviation(word_or_phrase, existing_abbreviations, prepend_option=False, no_numbers=False):
     debug = False  # Set to True to enable debug output
-    abbreviation_methods = [heuristic_syllables, generate_truncated_abbreviation, generate_contracted_abbreviation]
+    abbreviation_methods = [generate_syllable_abbreviation, generate_truncated_abbreviation, generate_contracted_abbreviation]
     abbreviation = ""
 
     # Ensure existing_abbreviations is a set for efficient lookups
@@ -401,7 +395,7 @@ def generate_abbreviation(word_or_phrase, existing_abbreviations, prepend_option
 
     # Try each abbreviation method in order
     for method in abbreviation_methods:
-        temp_abbr = method(word_or_phrase) if method != heuristic_syllables else ''.join(method(word_or_phrase))
+        temp_abbr = method(word_or_phrase) if method != generate_syllable_abbreviation else ''.join(method(word_or_phrase))
         if debug: print(f"{method.__name__}: {temp_abbr}")
         if temp_abbr not in existing_abbreviations and not is_real_word(temp_abbr):
             abbreviation = temp_abbr
@@ -439,6 +433,9 @@ def generate_abbreviation(word_or_phrase, existing_abbreviations, prepend_option
     existing_abbreviations.add(abbreviation)
     return abbreviation
 
+def contains_number(s):
+    return any(char.isdigit() for char in s)
+
 
 def generate_all_abbreviations(text, layouts, prepend=False):
     # Tokenize the text and filter out stopwords
@@ -450,73 +447,65 @@ def generate_all_abbreviations(text, layouts, prepend=False):
 
     # Find common phrases and calculate their frequencies
     common_phrases_with_freq = find_common_phrases(text, max_length=15, min_frequency=2)
-    # Combine token and phrase frequencies
     all_frequencies = {**common_phrases_with_freq, **token_frequency}
 
     abbreviation_variants = []
+    existing_abbreviations_standard = set()
+    existing_abbreviations_standard_nonum = set()
+    existing_abbreviations_syllable = set()
+    existing_abbreviations_syllable_nonum = set()
+    existing_abbreviations_truncated = set()
+    existing_abbreviations_truncated_nonum = set()
+    existing_abbreviations_contracted = set()
+    existing_abbreviations_contracted_nonum = set()
+    existing_abbreviations_proximity = {layout_name: set() for layout_name in layouts}
+
 
     for original, freq in all_frequencies.items():
         if len(original) <= 1 or original in stopwords.words('english'):
             continue
 
-        # Reset existing abbreviations for each type
-        existing_standard_abbr = set()
-        standard_abbr = generate_abbreviation(original, existing_standard_abbr, prepend)
-        standard_abbr_nonum = generate_abbreviation(original, existing_standard_abbr, prepend, True)
+        # Generate a "Standard" abbreviation with its own uniqueness handling
+        standard_abbr = generate_abbreviation(original, existing_abbreviations_standard, prepend)
+        standard_abbr_nonum = generate_abbreviation(original, existing_abbreviations_standard_nonum, prepend, True)
 
-        existing_syllable_abbr = set()
-        syllable_abbr = generate_syllable_abbreviation(original, existing_syllable_abbr,prepend) if ' ' not in original else standard_abbr
+        # For other strategies, generate initial abbreviation and then ensure uniqueness
+        syllable_abbr = generate_syllable_abbreviation(original)
+        syllable_abbr_num = make_abbreviation_unique(syllable_abbr, original, existing_abbreviations_syllable, prepend, use_numbers=True)
+        syllable_abbr_nonum = make_abbreviation_unique(syllable_abbr, original, existing_abbreviations_syllable_nonum, prepend, use_numbers=False, current_method='syllable')
 
         truncated_abbr = generate_truncated_abbreviation(original)
+        truncated_abbr_num = make_abbreviation_unique(truncated_abbr,original, existing_abbreviations_truncated, prepend, use_numbers=True)
+        truncated_abbr_nonum = make_abbreviation_unique(truncated_abbr,original, existing_abbreviations_truncated_nonum, prepend, use_numbers=False)
+
         contracted_abbr = generate_contracted_abbreviation(original)
+        contracted_abbr_num = make_abbreviation_unique(contracted_abbr,original, existing_abbreviations_contracted, prepend, use_numbers=True)
+        contracted_abbr_nonum = make_abbreviation_unique(contracted_abbr,original, existing_abbreviations_contracted_nonum, prepend,use_numbers=False)
 
-
-        # Generate proximity-based abbreviations for each layout, with separate tracking
+        # Generate proximity-based abbreviations with separate tracking
         proximity_abbrs = {}
         for layout_name, layout in layouts.items():
-            existing_proximity_abbr = set()
-            proximity_abbrs[layout_name] = generate_proximity_based_abbreviation(original, layout, existing_proximity_abbr,prepend)
+            proximity_abbr = generate_proximity_based_abbreviation(original, layout, existing_abbreviations_proximity[layout_name], prepend)
+            # No point doing this - adding numbers or letters would totally screw it up
+            #proximity_abbr = make_abbreviation_unique(proximity_abbr, existing_abbreviations, prepend)
+            proximity_abbrs[layout_name] = proximity_abbr
 
         abbreviation_variants.append({
             'Original': original,
             'Frequency': freq,
             'Standard': standard_abbr,
-            'Standard-No Numbers':standard_abbr_nonum,
-            'Syllable': syllable_abbr,
-            'Truncated': truncated_abbr,
-            'Contracted': contracted_abbr,
+            'Standard-No Numbers': standard_abbr_nonum,
+            'Syllable': syllable_abbr_num,
+            'Syllable-No Numbers': syllable_abbr_nonum,
+            'Truncated': truncated_abbr_num,
+            'Truncated-No Numbers': truncated_abbr_nonum,
+            'Contracted': contracted_abbr_num,
+            'Contracted-No Numbers': contracted_abbr_nonum,
             **proximity_abbrs
         })
 
     return pd.DataFrame(abbreviation_variants)
-    
-def unique_abbreviation(original, existing_abbreviations, english_words, avoid_numbers=False):
-    abbreviation = generate_abbreviation(original,existing_abbreviations)
-    base_abbreviation = abbreviation
-    counter = 1
 
-    while abbreviation in existing_abbreviations or abbreviation in english_words:
-        if avoid_numbers:
-            # Generate a new abbreviation variant by appending a new letter or duplicating the last one
-            # This checks if we've tried less than the length of the original word to find a unique letter
-            if counter <= len(original):
-                next_index = counter % len(original)  # Use modulo to cycle through the original word's letters
-                next_letter = original[next_index]
-            else:
-                # If all letters have been tried, start doubling the last letter of the abbreviation
-                next_letter = abbreviation[-1]
-                
-            abbreviation = base_abbreviation + next_letter
-        else:
-            # Use numbers to ensure uniqueness
-            abbreviation = f"{base_abbreviation}{counter}"
-        
-        counter += 1
-        if counter > 100:  # Safety check to prevent infinite loops
-            break
-
-    existing_abbreviations.add(abbreviation)
-    return abbreviation
 
 def find_common_phrases(text, max_length=15, min_frequency=2):
     tokens = word_tokenize(text.lower())
@@ -532,32 +521,6 @@ def find_common_phrases(text, max_length=15, min_frequency=2):
     # Return phrases and their frequencies
     return { ' '.join(phrase): count for phrase, count in common_phrases.items() if count >= min_frequency }
 
-def process_text(text,avoid_numbers=False):
-    # Find common phrases and their frequencies
-    common_phrases_with_freq = find_common_phrases(text, max_length=15, min_frequency=2)
-    
-    # Generate abbreviations for common phrases
-    existing_abbreviations = set()
-    abbreviations = {}
-    for phrase, freq in common_phrases_with_freq.items():
-        abbreviation = unique_abbreviation(phrase, existing_abbreviations, english_words, avoid_numbers)
-        existing_abbreviations.add(abbreviation)
-        abbreviations[phrase] = (abbreviation, freq)
-    
-    # Process individual words not in common phrases
-    words = set(word_tokenize(text.lower())) - set(' '.join(common_phrases_with_freq.keys()).split())
-    for word in words:
-        if word.lower() in english_stopwords or len(word) <= 1:
-            continue
-        if word not in abbreviations:  # Avoid reprocessing
-            freq = text.lower().split().count(word)  # Simple frequency count for individual words
-            abbreviation = unique_abbreviation(word, existing_abbreviations, english_words,avoid_numbers)
-            existing_abbreviations.add(abbreviation)
-            abbreviations[word] = (abbreviation, freq)
-    
-    return abbreviations
-
-
 def filter_df(df, option):
     if option == 'Just Phrases':
         # Filter to show only phrases (assuming phrases contain spaces)
@@ -568,22 +531,6 @@ def filter_df(df, option):
     else:
         # 'All' option, no filtering needed
         return df
-
-def adjust_abbreviations_for_prepend(df, prepend_option):
-    # Iterate over each abbreviation type column (excluding 'Original' and 'Frequency')
-    for col in df.columns.drop(['Original', 'Frequency']):
-        # Create a new column for adjusted abbreviations
-        new_col_name = f"Adjusted {col}"
-        
-        if prepend_option:
-            # Apply the prepend logic
-            df[new_col_name] = df[col].apply(lambda x: '\\' + x if len(x) < 2 else x)
-        else:
-            # If prepend option is not selected, just copy the original abbreviations
-            df[new_col_name] = df[col]
-    
-    return df
-
 
 def calculate_savings(df, top_n, abbreviation_column, user_typing_speed):
     # Assume each word is 5 keystrokes on average
@@ -688,8 +635,16 @@ if uploaded_files:
     df_all_variants = generate_all_abbreviations(combined_text, layout_mapping, prepend=False)
     df_all_variants_prepend = generate_all_abbreviations(combined_text, layout_mapping, prepend=True)
 
-    abbreviation_options = ["Standard", "Standard-No Numbers", "Syllable", "Truncated", "Contracted", "Positional"]
-    selected_abbreviation_strategy = st.selectbox("Select abbreviation strategy:", options=abbreviation_options, index=0)
+    # Define your two lists of options
+    abbreviation_options = ["Standard", "Syllable", "Truncated", "Contracted", "Positional"]
+    abbreviation_options_nonum = ["Standard-No Numbers", "Syllable-No Numbers", "Truncated-No Numbers", "Contracted-No Numbers", "Positional"]
+    # Create a checkbox to toggle between the lists
+    use_nonum_options = st.checkbox("Use No-Numbers Options")   
+    st.caption("Check this if you prefer letters to append your abbreviation rather than numbers when one already exists")
+    # Determine which list to display based on the checkbox state
+    options_to_display = abbreviation_options_nonum if use_nonum_options else abbreviation_options
+    # Display the select box with the determined list of options
+    selected_abbreviation_strategy = st.selectbox("Select abbreviation strategy:", options=options_to_display, index=0)
     st.caption("Standard tries to use Syllable techniques then truncation and then contraction. It tries to minimise having duplicate abbreviations. Other techniques will add numbers to abbreviations if they are dupliicated. Some studies suggest Truncation is easier to learn but note its fixed at 3 letters per word. If you want two-letter abbreviations, use Syllable. Prepend for one letter abbreviations.")
    
     layout_option = None
