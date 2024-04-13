@@ -13,6 +13,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 import re
 import string
+import os
 
 # Ensure necessary NLTK resources are downloaded
 nltk.download('punkt')
