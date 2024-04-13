@@ -219,16 +219,22 @@ def read_and_combine_texts(uploaded_files):
 
 
 def read_text(uploaded_file):
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.' + uploaded_file.name.split('.')[-1]) as tmp_file:
-        tmp_file.write(uploaded_file.getvalue())
-        tmp_file_path = tmp_file.name
     try:
-        text = textract.process(tmp_file_path, encoding='utf-8')
-        return text.decode('utf-8')
-    except textract.exceptions.ShellError as e:
-        print(f"Error processing file {uploaded_file.name}: {e}")
-        # Handle the error, e.g., by logging it or returning a default message
-        return "Error processing file. Please ensure it's a supported format."
+        # Use a context manager to handle the temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.' + uploaded_file.name.split('.')[-1]) as tmp_file:
+            tmp_file.write(uploaded_file.getvalue())
+            tmp_file_path = tmp_file.name
+
+        # Attempt to extract text from the file
+        try:
+            text = textract.process(tmp_file_path, encoding='utf-8')
+            return text.decode('utf-8')
+        except textract.exceptions.ShellError as e:
+            st.error(f"Error processing file {uploaded_file.name}: {e}")
+            return "Error processing file. Please ensure it's a supported format."
+    finally:
+        # Ensure the temporary file is deleted even if an exception occurs
+        os.remove(tmp_file_path)
 
 
 
